@@ -1,0 +1,51 @@
+.login-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.intro {
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.08), white);
+}
+
+.form-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+  color: #0f172a;
+
+  input {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+  }
+}
+
+.remember {
+  font-weight: 500;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.alert {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+
+  &.tip {
+    background: #f0fdfa;
+    color: #0f5132;
+    border-color: rgba(20, 184, 166, 0.3);
+  }
+}

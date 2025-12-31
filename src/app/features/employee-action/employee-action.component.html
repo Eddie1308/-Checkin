@@ -1,0 +1,45 @@
+<div class="backdrop" (click)="close.emit()"></div>
+<div class="sheet card">
+  <header>
+    <div>
+      <div class="label">Action</div>
+      <div class="title">{{ employee.employee_name || employee.name }}</div>
+      <div class="meta">ID: {{ employee.name }}</div>
+    </div>
+    <button class="btn outline" (click)="close.emit()">Close</button>
+  </header>
+
+  <section class="capture">
+    <label class="file-label">
+      <input type="file" accept="image/*" capture="environment" (change)="onFileChange($event)">
+      <span>📸 Capture / upload photo (required)</span>
+    </label>
+    <div class="preview" *ngIf="photoPreview">
+      <img [src]="photoPreview" alt="Preview">
+    </div>
+  </section>
+
+  <section class="location">
+    <div class="row">
+      <div>
+        <div class="label">Location</div>
+        <div *ngIf="location?.status === 'ok'">
+          Lat: {{ location?.lat }}, Lng: {{ location?.lng }} (±{{ location?.accuracy }}m)
+        </div>
+        <div *ngIf="location?.status === 'denied'">User denied GPS. Will submit with status=denied.</div>
+        <div *ngIf="!location">Not captured yet.</div>
+      </div>
+      <button class="btn outline" type="button" (click)="captureLocation()">Get GPS</button>
+    </div>
+  </section>
+
+  <section class="actions">
+    <button class="btn primary" [disabled]="loading" (click)="submit('IN')">Check IN</button>
+    <button class="btn outline" [disabled]="loading" (click)="submit('OUT')">Check OUT</button>
+  </section>
+
+  <div class="alert danger" *ngIf="error">{{ error }}</div>
+  <div class="note">
+    Files are attached privately to Employee Checkin. Location status is stored even if GPS denied/unavailable.
+  </div>
+</div>
