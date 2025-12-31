@@ -11,11 +11,20 @@
 
   <section class="capture">
     <label class="file-label">
-      <input type="file" accept="image/*" capture="environment" (change)="onFileChange($event)">
+      <input #fileInput type="file" accept="image/*" capture="environment" (change)="onFileChange($event)">
       <span>📸 Capture / upload photo (required)</span>
     </label>
     <div class="preview" *ngIf="photoPreview">
       <img [src]="photoPreview" alt="Preview">
+    </div>
+
+    <!-- Camera overlay used when the supervisor clicks Check IN/OUT and we need to capture a photo -->
+    <div class="camera-overlay" *ngIf="capturing">
+      <video #video autoplay playsinline></video>
+      <div class="camera-controls">
+        <button class="btn primary" (click)="takePhotoAndSubmit()">Take Photo</button>
+        <button class="btn outline" (click)="cancelCapture()">Cancel</button>
+      </div>
     </div>
   </section>
 
@@ -27,7 +36,8 @@
           Lat: {{ location?.lat }}, Lng: {{ location?.lng }} (±{{ location?.accuracy }}m)
         </div>
         <div *ngIf="location?.status === 'denied'">User denied GPS. Will submit with status=denied.</div>
-        <div *ngIf="!location">Not captured yet.</div>
+        <div *ngIf="capturingLocation">Fetching location…</div>
+        <div *ngIf="!location && !capturingLocation">Not captured yet.</div>
       </div>
       <button class="btn outline" type="button" (click)="captureLocation()">Get GPS</button>
     </div>
@@ -39,6 +49,7 @@
   </section>
 
   <div class="alert danger" *ngIf="error">{{ error }}</div>
+  <div class="alert success" *ngIf="successMessage">{{ successMessage }}</div>
   <div class="note">
     Files are attached privately to Employee Checkin. Location status is stored even if GPS denied/unavailable.
   </div>

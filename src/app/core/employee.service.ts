@@ -28,10 +28,29 @@ export class EmployeeService {
     );
   }
 
-  listEmployeesForSupervisor(supervisorEmployeeId: string): Observable<Employee[]> {
-    return this.fetchEmployees([
-      ['Employee', 'custom_site_supervisor', '=', supervisorEmployeeId]
-    ]);
+  listEmployeesForSupervisor(supervisor: Employee): Observable<Employee[]> {
+    // Build a list of possible values that could be stored in custom_site_supervisor
+    // (doc name, employee_name, user_id, personal_email, company_email).
+    const candidates = [
+      supervisor.name,
+      supervisor.employee_name,
+      supervisor.user_id,
+      supervisor.personal_email,
+      supervisor.company_email
+    ].filter(Boolean) as string[];
+
+    // Try each candidate sequentially until we get a non-empty result.
+    let result$ = of([] as Employee[]);
+    for (const candidate of candidates) {
+      result$ = result$.pipe(
+        switchMap(list => (list && list.length ? of(list) : this.fetchEmployees([
+          ['Employee', 'custom_site_supervisor', '=', candidate]
+        ])))
+      );
+    }
+
+    // If nothing matched, return empty array.
+    return result$;
   }
 
   private findByField(field: string, value: string): Observable<Employee | null> {

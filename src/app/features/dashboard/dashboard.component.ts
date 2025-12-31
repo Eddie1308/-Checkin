@@ -51,11 +51,22 @@ export class DashboardComponent implements OnInit {
             return;
           }
           this.supervisor = supervisor;
-          this.employeeService.listEmployeesForSupervisor(supervisor.name).subscribe({
+          this.employeeService.listEmployeesForSupervisor(supervisor).subscribe({
             next: list => {
+              // Debugging: log the supervisor and the raw list returned from ERPNext
+              console.log('Dashboard: supervisor=', supervisor);
+              console.log('Dashboard: employee list response=', list);
+
+              // If no other employees are assigned to this supervisor, show a helpful message
+              const otherEmployees = list.filter(e => e.name !== supervisor.name);
+              if (otherEmployees.length === 0) {
+                this.infoMessage = `No employees found with custom_site_supervisor set to ${supervisor.name}. Confirm the field is populated in ERPNext and that your role can read Employee records.`;
+              } else {
+                this.infoMessage = 'Live data comes directly from ERPNext. Ensure your ERPNext role can read Employee and create Employee Checkin.';
+              }
+
               this.employees = this.mergeSupervisor(supervisor, list);
               this.loading = false;
-              this.infoMessage = 'Live data comes directly from ERPNext. Ensure your ERPNext role can read Employee and create Employee Checkin.';
             },
             error: err => {
               this.loading = false;

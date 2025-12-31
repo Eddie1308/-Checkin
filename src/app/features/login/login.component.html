@@ -1,54 +1,29 @@
-<div class="login-grid">
-  <div class="card intro">
-    <h1>Welcome, Supervisor</h1>
-    <p>Authenticate to manage on-site check-ins directly against ERPNext.</p>
-    <ul>
-      <li>Preferred: API key + secret (token header, never stored beyond session unless you opt-in).</li>
-      <li>Fallback: Username + password (session cookie; ERPNext must allow cross-site credentials).</li>
-      <li>Credentials are kept in-memory. "Remember me" stores only in <strong>sessionStorage</strong> (cleared on browser close).</li>
-      <li>Ensure ERPNext CORS allows this origin and credentials if using cookies.</li>
-    </ul>
+<div class="login-container">
+  <div class="login-header">
+    <img src="assets/logo.png" alt="CYA Logo" class="logo">
+    <h1>Welcome to CYA</h1>
   </div>
-
-  <div class="card form-card">
-    <h2>Option A — API Key + Secret</h2>
-    <form [formGroup]="apiKeyForm" (ngSubmit)="loginWithApiKey()">
-      <label>
-        API Key
-        <input type="text" formControlName="apiKey" autocomplete="off" required>
-      </label>
-      <label>
-        API Secret
-        <input type="password" formControlName="apiSecret" autocomplete="off" required>
-      </label>
-      <label class="remember">
-        <input type="checkbox" formControlName="remember">
-        Remember in this browser session (stores in sessionStorage)
-      </label>
-      <button class="btn primary" type="submit" [disabled]="loading">Sign in with API token</button>
-    </form>
+  <div class="login-content">
+    <div class="login-card">
+      <h2>Log in</h2>
+      <form class="login-form" [formGroup]="passwordForm" (ngSubmit)="loginWithPassword()">
+        <label>
+          Username / Email
+          <input type="text" formControlName="usr" autocomplete="username" required>
+        </label>
+        <label>
+          Password
+          <input type="password" formControlName="pwd" autocomplete="current-password" required>
+        </label>
+        <label class="remember">
+          <input type="checkbox" formControlName="remember">
+          Remember in this browser session (stores in sessionStorage)
+        </label>
+        <button class="btn primary" type="submit" [disabled]="loading">Login</button>
+      </form>
+    </div>
+    <div class="alert" *ngIf="error">
+      <strong>Login failed:</strong> {{ error }}
+    </div>
   </div>
-
-  <div class="card form-card">
-    <h2>Option B — Username + Password</h2>
-    <form [formGroup]="passwordForm" (ngSubmit)="loginWithPassword()">
-      <label>
-        Username / Email
-        <input type="text" formControlName="usr" autocomplete="username" required>
-      </label>
-      <label>
-        Password
-        <input type="password" formControlName="pwd" autocomplete="current-password" required>
-      </label>
-      <label class="remember">
-        <input type="checkbox" formControlName="remember">
-        Remember in this browser session (stores in sessionStorage)
-      </label>
-      <button class="btn primary" type="submit" [disabled]="loading">Login with session cookie</button>
-    </form>
-  </div>
-</div>
-
-<div class="alert" *ngIf="error">
-  <strong>Login failed:</strong> {{ error }}
 </div>

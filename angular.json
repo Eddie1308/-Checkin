@@ -81,5 +81,8 @@
       }
     }
   },
-  "defaultProject": "checkin-app"
+  "defaultProject": "checkin-app",
+  "cli": {
+    "analytics": false
+  }
 }

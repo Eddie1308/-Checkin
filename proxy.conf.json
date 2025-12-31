@@ -1,0 +1,9 @@
+{
+  "/api": {
+    "target": "https://cya.wkksa.com",
+    "secure": true,
+    "changeOrigin": true,
+    "cookieDomainRewrite": "",
+    "logLevel": "info"
+  }
+}

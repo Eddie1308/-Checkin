@@ -9,12 +9,6 @@ import { AuthService } from '../../core/auth.service';
   styleUrls: ['./login.component.scss']
 })
 export class LoginComponent {
-  apiKeyForm = this.fb.group({
-    apiKey: ['', Validators.required],
-    apiSecret: ['', Validators.required],
-    remember: [false]
-  });
-
   passwordForm = this.fb.group({
     usr: ['', [Validators.required]],
     pwd: ['', Validators.required],
@@ -25,24 +19,6 @@ export class LoginComponent {
   loading = false;
 
   constructor(private fb: FormBuilder, private auth: AuthService, private router: Router) {}
-
-  loginWithApiKey(): void {
-    if (this.apiKeyForm.invalid) {
-      return;
-    }
-    this.loading = true;
-    this.error = undefined;
-    const { apiKey, apiSecret, remember } = this.apiKeyForm.value;
-    this.auth
-      .loginWithApiKey(apiKey!, apiSecret!, !!remember)
-      .subscribe({
-        next: () => this.router.navigate(['/dashboard']),
-        error: err => {
-          this.error = this.parseError(err);
-          this.loading = false;
-        }
-      });
-  }
 
   loginWithPassword(): void {
     if (this.passwordForm.invalid) {
