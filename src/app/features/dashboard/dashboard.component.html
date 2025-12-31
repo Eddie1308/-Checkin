@@ -1,0 +1,43 @@
+<div class="layout">
+  <div class="panel">
+    <h2>Supervisor</h2>
+    <div class="card supervisor" *ngIf="supervisor">
+      <div>
+        <div class="name">{{ supervisor.employee_name || supervisor.name }}</div>
+        <div class="meta">ID: {{ supervisor.name }}</div>
+        <div class="meta" *ngIf="supervisor.department">Dept: {{ supervisor.department }}</div>
+        <div class="meta" *ngIf="supervisor.company">Company: {{ supervisor.company }}</div>
+      </div>
+    </div>
+    <div class="alert" *ngIf="infoMessage">{{ infoMessage }}</div>
+    <div class="alert danger" *ngIf="error">{{ error }}</div>
+  </div>
+
+  <div class="panel">
+    <div class="list-header">
+      <h2>Employees you manage</h2>
+      <input type="search" placeholder="Search by name, id, department" [(ngModel)]="searchTerm">
+    </div>
+
+    <div *ngIf="loading">Loading employees...</div>
+    <div class="employee-list" *ngIf="!loading">
+      <div class="employee-row card" *ngFor="let emp of filtered" (click)="openAction(emp)">
+        <div>
+          <div class="name">{{ emp.employee_name || emp.name }}</div>
+          <div class="meta">ID: {{ emp.name }}</div>
+          <div class="meta" *ngIf="emp.department">{{ emp.department }}</div>
+          <div class="meta" *ngIf="emp.designation">{{ emp.designation }}</div>
+        </div>
+        <div class="pill">Manage</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<app-employee-action
+  *ngIf="selected && supervisor"
+  [employee]="selected!"
+  [supervisor]="supervisor!"
+  (close)="closeAction()"
+  (completed)="onComplete($event)">
+</app-employee-action>

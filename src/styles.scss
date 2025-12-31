@@ -1,0 +1,66 @@
+@use "sass:color";
+
+:root {
+  --primary: #0f766e;
+  --accent: #14b8a6;
+  --danger: #dc2626;
+  --surface: #f8fafc;
+  --text: #0f172a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  color: var(--text);
+  background: var(--surface);
+}
+
+a {
+  color: var(--primary);
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+
+  &.primary {
+    background: var(--primary);
+    color: white;
+  }
+
+  &.outline {
+    background: transparent;
+    color: var(--primary);
+    border: 1px solid color.adjust(#0f766e, $lightness: 10%);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+input,
+button,
+select {
+  font: inherit;
+}
