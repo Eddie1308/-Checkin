@@ -1,0 +1,82 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.sheet {
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  width: min(520px, 96vw);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.label {
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.title {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.meta {
+  color: #475569;
+}
+
+.capture {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.file-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+
+  input {
+    display: none;
+  }
+}
+
+.preview img {
+  width: 100%;
+  border-radius: 10px;
+}
+
+.location .row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.alert.danger {
+  background: #fef2f2;
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.note {
+  font-size: 0.9rem;
+  color: #475569;
+}
