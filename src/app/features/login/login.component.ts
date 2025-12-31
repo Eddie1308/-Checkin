@@ -2,7 +2,6 @@ import { Component } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
-import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-login',
@@ -64,14 +63,10 @@ export class LoginComponent {
   }
 
   private parseError(error: unknown): string {
-    const err = error as HttpErrorResponse;
-    if (err?.status === 0) {
-      return 'Network/CORS/SSL issue: ERPNext did not respond. Confirm https://cya.wkksa.com is reachable from the browser, has a valid certificate, and CORS allows this origin (and credentials if using session login).';
-    }
-    const message = err?.error?.message || err?.message;
     if (typeof error === 'string') {
       return error;
     }
+    const message = (error as any)?.error?.message || (error as any)?.message;
     return message || 'Unable to sign in. Please verify credentials and network/CORS settings.';
   }
 }

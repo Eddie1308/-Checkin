@@ -29,11 +29,6 @@ npm run build        # production build
 - Credentials are kept in memory; optional “Remember me” stores them only in `sessionStorage`.
 - No localStorage usage. For cookie mode, ERPNext must allow the SPA origin and credentials in CORS.
 
-## Troubleshooting login (status 0 / Unknown Error)
-- Ensure `https://cya.wkksa.com` is reachable from the browser and has a valid certificate (self-signed/invalid certs are blocked by browsers).
-- Configure ERPNext CORS: allow this app’s origin, allow `Authorization` header, and enable credentials for `/api/method/login` and subsequent requests.
-- If using API key/secret, no cookies are required; if using username/password, cookies must be allowed cross-site.
-
 ## Directory layout
 - `src/app/core` — auth, API client, employee + attendance services, guards.
 - `src/app/features` — login, dashboard, employee action sheet.
