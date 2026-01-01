@@ -19,7 +19,7 @@ export interface LoginResponse {
 
 // Use relative paths in dev so requests go through the Angular dev proxy (see proxy.conf.json).
 // For production builds, set the full ERP_BASE_URL or use environment files.
-export const ERP_BASE_URL = '';
+export const ERP_BASE_URL = 'http://cya.wkksa.com/';
 
 @Injectable({
   providedIn: 'root'
