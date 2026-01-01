@@ -2,6 +2,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, map, of, switchMap, tap } from 'rxjs';
 import { StorageService } from './storage.service';
+import { environment } from '../../environments/environment';
 
 export type AuthMode = 'token' | 'session';
 
@@ -19,7 +20,6 @@ export interface LoginResponse {
 
 // Use relative paths in dev so requests go through the Angular dev proxy (see proxy.conf.json).
 // For production builds, set the full ERP_BASE_URL or use environment files.
-export const ERP_BASE_URL = 'http://cya.wkksa.com/';
 
 @Injectable({
   providedIn: 'root'
@@ -44,7 +44,7 @@ export class AuthService {
     });
 
     return this.http
-      .get<LoginResponse>(`${ERP_BASE_URL}/api/method/frappe.auth.get_logged_user`, { headers })
+      .get<LoginResponse>(`${environment.ERP_BASE_URL}/api/method/frappe.auth.get_logged_user`, { headers })
       .pipe(
         map(res => res.message),
         tap(user => this.persistState({ mode: 'token', apiKey, apiSecret, user, remember }, remember))
@@ -54,13 +54,13 @@ export class AuthService {
   loginWithPassword(usr: string, pwd: string, remember = false): Observable<string> {
     return this.http
       .post<LoginResponse>(
-        `${ERP_BASE_URL}/api/method/login`,
+        `${environment.ERP_BASE_URL}/api/method/login`,
         { usr, pwd },
         { withCredentials: true }
       )
       .pipe(
         switchMap(() =>
-          this.http.get<LoginResponse>(`${ERP_BASE_URL}/api/method/frappe.auth.get_logged_user`, {
+          this.http.get<LoginResponse>(`${environment.ERP_BASE_URL}/api/method/frappe.auth.get_logged_user`, {
             withCredentials: true
           })
         ),
