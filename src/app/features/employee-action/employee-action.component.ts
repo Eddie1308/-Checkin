@@ -1,201 +1,345 @@
-import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, OnInit, OnDestroy } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, HostListener, OnDestroy } from '@angular/core';
 import { AttendanceService } from '../../core/attendance.service';
+import { GeoService, GeoLocation } from '../../core/geo.service';
 import { Employee } from '../../models/employee.model';
 import { LogType } from '../../models/checkin.model';
+import { firstValueFrom } from 'rxjs';
 
-type LocationStatus = 'ok' | 'denied' | 'unavailable';
+type LocationDiagnostics = {
+  code?: number;
+  message?: string;
+  codeLabel?: string;
+  secureContext: boolean;
+  origin: string;
+};
 
 @Component({
   selector: 'app-employee-action',
   templateUrl: './employee-action.component.html',
   styleUrls: ['./employee-action.component.scss']
 })
-export class EmployeeActionComponent implements OnInit {
-  ngOnInit(): void {
-    // Automatically attempt to capture location when the action sheet opens
-    // (non-blocking; user can still click Get GPS to retry)
-    this.captureLocation();
-  }
+export class EmployeeActionComponent implements OnDestroy {
   @Input() employee!: Employee;
   @Input() supervisor!: Employee;
   @Output() close = new EventEmitter<void>();
   @Output() completed = new EventEmitter<{ type: LogType; name: string }>();
 
-  @ViewChild('fileInput') fileInput?: ElementRef<HTMLInputElement>;
-  @ViewChild('video') video?: ElementRef<HTMLVideoElement>;
+  @ViewChild('cameraInput') cameraInput!: ElementRef<HTMLInputElement>;
 
   photoFile?: File;
-  photoPreview?: string;
-  location?: { lat?: number; lng?: number; accuracy?: number; status: LocationStatus };
+  photoPreviewUrl?: string;
+  location?: { lat?: number; lng?: number; accuracy?: number };
+  locationTimestamp?: number;
+  locationMessage?: string;
+  locationDiagnostics?: LocationDiagnostics;
+  openingCamera = false;
+  gettingLocation = false;
+  submitting = false;
   loading = false;
   error?: string;
   successMessage?: string;
+  statusText?: string;
 
-  // Camera capture state
-  capturing = false;
-  private videoStream?: MediaStream | null = null;
-  private pendingLogType?: LogType | null = null;
+  private pendingAction?: LogType | null = null;
+  private lastAction?: LogType | null = null;
+  private lastGpsDurationMs = 0;
 
-  // Location capture state
-  capturingLocation = false;
-
-  constructor(private attendance: AttendanceService) {}
+  constructor(private attendance: AttendanceService, private geo: GeoService) {}
 
   ngOnDestroy(): void {
-    this.stopCamera();
+    this.revokePreviewUrl();
   }
 
-  onFileChange(event: Event): void {
+  async onCameraChange(event: Event): Promise<void> {
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
+    this.openingCamera = false;
+    this.statusText = undefined;
     if (!file) {
+      this.pendingAction = null;
+      target.value = '';
+      this.gettingLocation = false;
       return;
     }
-    this.setPhotoFile(file);
+    if (!this.pendingAction) {
+      target.value = '';
+      return;
+    }
+
+    const normalizedFile = await this.normalizePhoto(file);
+    this.setPhotoFile(normalizedFile);
+    const gpsStart = performance.now();
+    if (!this.isLocationFresh(60000)) {
+      this.gettingLocation = true;
+      this.statusText = 'Getting location...';
+      this.locationDiagnostics = undefined;
+      try {
+        const pos = await this.geo.getFastLocation();
+        this.applyLocation(pos);
+        this.lastGpsDurationMs = performance.now() - gpsStart;
+      } catch (err) {
+        this.gettingLocation = false;
+        this.statusText = undefined;
+        this.pendingAction = null;
+        this.location = undefined;
+        this.locationTimestamp = undefined;
+        this.locationDiagnostics = this.buildDiagnostics(err);
+        this.locationMessage = this.describeLocationError(err);
+        this.clearPhoto();
+        target.value = '';
+        return;
+      }
+      this.gettingLocation = false;
+    } else {
+      this.lastGpsDurationMs = 0;
+    }
+
+    this.statusText = 'Submitting...';
+    const logType = this.pendingAction;
+    this.pendingAction = null;
+    await this.submit(logType, normalizedFile, this.lastGpsDurationMs);
+    target.value = '';
+  }
+
+  @HostListener('window:focus')
+  onWindowFocus(): void {
+    if (this.openingCamera && !this.submitting) {
+      this.openingCamera = false;
+      this.statusText = undefined;
+    }
+  }
+
+  startAction(logType: LogType): void {
+    if (this.loading || this.gettingLocation || this.openingCamera || this.submitting || this.pendingAction) {
+      return;
+    }
+    this.error = undefined;
+    this.successMessage = undefined;
+    this.locationMessage = undefined;
+    this.locationDiagnostics = undefined;
+    this.pendingAction = logType;
+    this.lastAction = logType;
+    this.statusText = 'Opening camera...';
+    this.openCamera();
+  }
+
+  retakePhoto(): void {
+    if (this.openingCamera || this.gettingLocation || this.submitting) {
+      return;
+    }
+    this.clearPhoto();
+    if (!this.lastAction) {
+      return;
+    }
+    this.pendingAction = this.lastAction;
+    this.statusText = 'Opening camera...';
+    this.openCamera();
+  }
+
+  retryLocation(): void {
+    if (this.gettingLocation || this.submitting) {
+      return;
+    }
+    this.requestLocationOnly();
+  }
+
+  private requestLocationOnly(): void {
+    this.gettingLocation = true;
+    this.statusText = 'Getting location...';
+    this.locationMessage = undefined;
+    this.locationDiagnostics = undefined;
+    const started = performance.now();
+    this.geo
+      .retryLocation()
+      .then(pos => {
+        this.applyLocation(pos);
+        this.locationDiagnostics = undefined;
+        this.gettingLocation = false;
+        this.statusText = undefined;
+        this.lastGpsDurationMs = performance.now() - started;
+      })
+      .catch(err => {
+        this.gettingLocation = false;
+        this.statusText = undefined;
+        this.location = undefined;
+        this.locationTimestamp = undefined;
+        this.locationDiagnostics = this.buildDiagnostics(err);
+        this.locationMessage = this.describeLocationError(err);
+      });
+  }
+
+  private openCamera(): void {
+    if (!this.pendingAction) {
+      this.statusText = undefined;
+      return;
+    }
+    this.openingCamera = true;
+    try {
+      if (this.cameraInput && this.cameraInput.nativeElement) {
+        this.cameraInput.nativeElement.value = '';
+        this.cameraInput.nativeElement.click();
+      }
+    } catch (e) {
+      this.openingCamera = false;
+      this.statusText = undefined;
+      this.error = 'Unable to access camera.';
+    }
+  }
+
+  private async submit(logType: LogType, photoFile: File, gpsDurationMs: number): Promise<void> {
+    this.error = undefined;
+    this.loading = true;
+    this.submitting = true;
+    const totalStart = performance.now();
+    let createDuration = 0;
+    let uploadDuration = 0;
+    const refreshDuration = 0;
+
+    try {
+      console.log(`TIMING gps=${Math.round(gpsDurationMs)}ms`);
+      const custom_client_uuid = this.attendance.generateClientUuid();
+      const payload = {
+        employee: this.employee.name,
+        log_type: logType,
+        custom_site_supervisor: this.supervisor.name,
+        custom_lat: this.location?.lat,
+        custom_lng: this.location?.lng,
+        custom_accuracy: this.location?.accuracy,
+        custom_location_status: 'ok',
+        custom_client_uuid,
+        latitude: typeof this.location?.lat === 'number' ? this.location?.lat : undefined,
+        longitude: typeof this.location?.lng === 'number' ? this.location?.lng : undefined,
+        location_status: 'ok',
+        location:
+          typeof this.location?.lat === 'number' && typeof this.location?.lng === 'number'
+            ? `${this.location?.lat},${this.location?.lng}`
+            : undefined
+      } as any;
+
+      const createStart = performance.now();
+      const created = await firstValueFrom(this.attendance.createCheckin(payload));
+      createDuration = performance.now() - createStart;
+      console.log(`TIMING create=${Math.round(createDuration)}ms`);
+      const createdName = created?.data?.name;
+
+      const uploadStart = performance.now();
+      if (createdName && photoFile) {
+        await firstValueFrom(this.attendance.attachFileToCheckin(createdName, photoFile));
+      }
+      uploadDuration = performance.now() - uploadStart;
+      console.log(`TIMING upload=${Math.round(uploadDuration)}ms`);
+      console.log(`TIMING refresh=${Math.round(refreshDuration)}ms`);
+
+      const totalDuration = performance.now() - totalStart;
+      console.log(
+        `TIMINGS gps=${Math.round(gpsDurationMs)}ms create=${Math.round(createDuration)}ms upload=${Math.round(uploadDuration)}ms refresh=${Math.round(refreshDuration)}ms total=${Math.round(totalDuration)}ms`
+      );
+
+      this.loading = false;
+      this.submitting = false;
+      this.statusText = undefined;
+      this.successMessage = `Check-in recorded (doc ${createdName}). Location: ${this.location?.lat && this.location?.lng ? `${this.location?.lat},${this.location?.lng}` : 'not saved'}`;
+      if (createdName) {
+        this.completed.emit({ type: logType, name: createdName });
+      }
+      setTimeout(() => this.close.emit(), 1200);
+    } catch (err) {
+      const totalDuration = performance.now() - totalStart;
+      console.log(
+        `TIMINGS gps=${Math.round(gpsDurationMs)}ms create=${Math.round(createDuration)}ms upload=${Math.round(uploadDuration)}ms refresh=${Math.round(refreshDuration)}ms total=${Math.round(totalDuration)}ms`
+      );
+      this.loading = false;
+      this.submitting = false;
+      this.statusText = undefined;
+      this.error = (err as any)?.error?.message || (err as any)?.message || 'Unable to record check.';
+    }
   }
 
   private setPhotoFile(file: File): void {
     this.photoFile = file;
-    const reader = new FileReader();
-    reader.onload = () => (this.photoPreview = reader.result as string);
-    reader.readAsDataURL(file);
+    this.revokePreviewUrl();
+    this.photoPreviewUrl = URL.createObjectURL(file);
   }
 
-  // Camera helpers
-  async startCameraForSubmit(logType: LogType): Promise<void> {
-    this.error = undefined;
-    // If the browser supports getUserMedia, open an overlay with video
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      this.pendingLogType = logType;
-      try {
-        this.videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        if (this.video && this.video.nativeElement) {
-          this.video.nativeElement.srcObject = this.videoStream;
-          this.video.nativeElement.play().catch(() => {});
-        }
-        this.capturing = true;
-      } catch (err) {
-        console.error('Unable to access camera', err);
-        // Fall back to file input (mobile browsers will open camera with capture attribute)
-        this.openFilePicker();
-      }
-    } else {
-      // No camera API, fall back to file input
-      this.openFilePicker();
+  private async normalizePhoto(file: File): Promise<File> {
+    if (typeof createImageBitmap !== 'function') {
+      return file;
     }
-  }
-
-  cancelCapture(): void {
-    this.pendingLogType = null;
-    this.stopCamera();
-    this.capturing = false;
-  }
-
-  private stopCamera(): void {
     try {
-      if (this.video && this.video.nativeElement) {
-        this.video.nativeElement.pause();
-        this.video.nativeElement.srcObject = null;
+      const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' } as any);
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        return file;
       }
-      this.videoStream?.getTracks().forEach(t => t.stop());
-    } catch (e) {
-      // ignore
-    }
-    this.videoStream = null;
-  }
-
-  async takePhotoAndSubmit(): Promise<void> {
-    if (!this.video || !this.video.nativeElement) return;
-    const videoEl = this.video.nativeElement;
-    const w = videoEl.videoWidth || 640;
-    const h = videoEl.videoHeight || 480;
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      this.error = 'Unable to capture photo.';
-      return;
-    }
-    ctx.drawImage(videoEl, 0, 0, w, h);
-    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(b => resolve(b), 'image/jpeg', 0.85));
-    if (!blob) {
-      this.error = 'Unable to capture photo.';
-      return;
-    }
-    const file = new File([blob], `checkin-${Date.now()}.jpg`, { type: 'image/jpeg' });
-    this.setPhotoFile(file);
-    this.stopCamera();
-    this.capturing = false;
-
-    // Continue with submit using the pending log type
-    if (this.pendingLogType) {
-      const log = this.pendingLogType;
-      this.pendingLogType = null;
-      this.submit(log);
+      ctx.drawImage(bitmap, 0, 0);
+      const outputType = file.type || 'image/jpeg';
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, outputType, 0.92));
+      if (!blob) {
+        return file;
+      }
+      return new File([blob], file.name, { type: outputType });
+    } catch {
+      return file;
     }
   }
 
-  private openFilePicker(): void {
-    try {
-      this.fileInput?.nativeElement?.click();
-    } catch (e) {
-      // ignore
+  private clearPhoto(): void {
+    this.photoFile = undefined;
+    this.revokePreviewUrl();
+  }
+
+  private revokePreviewUrl(): void {
+    if (this.photoPreviewUrl) {
+      URL.revokeObjectURL(this.photoPreviewUrl);
+      this.photoPreviewUrl = undefined;
     }
   }
 
-  captureLocation(): void {
-    if (!('geolocation' in navigator)) {
-      this.location = { status: 'unavailable' };
-      return;
-    }
-
-    this.capturingLocation = true;
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        this.location = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy,
-          status: 'ok'
-        };
-        this.capturingLocation = false;
-      },
-      err => {
-        this.location = { status: err.code === err.PERMISSION_DENIED ? 'denied' : 'unavailable' };
-        this.capturingLocation = false;
-      },
-      { enableHighAccuracy: true, timeout: 15000 }
-    );
+  private applyLocation(pos: GeoLocation): void {
+    this.location = { lat: pos.lat, lng: pos.lng, accuracy: pos.accuracy };
+    this.locationTimestamp = pos.timestamp;
   }
 
-  submit(logType: LogType): void {
-    // If no photo yet, open the camera to capture one and continue submit after capture
-    if (!this.photoFile) {
-      this.startCameraForSubmit(logType).catch(err => {
-        console.error('Failed to start camera for submit', err);
-        this.error = 'Unable to access camera. You can try uploading a photo instead.';
-      });
-      return;
+  private isLocationFresh(maxAgeMs: number): boolean {
+    if (!this.location || !this.locationTimestamp) {
+      return false;
     }
+    return Date.now() - this.locationTimestamp <= maxAgeMs;
+  }
 
-    this.error = undefined;
-    this.loading = true;
-    const location = this.location || { status: 'unavailable' as LocationStatus };
-    this.attendance
-      .submitCheckinWithAttachment(this.employee.name, this.supervisor.name, logType, location, this.photoFile)
-      .subscribe({
-        next: res => {
-          this.loading = false;
-          this.successMessage = `Check-in recorded (doc ${res.name}). Location: ${res.location ?? (res.latitude && res.longitude ? `${res.latitude},${res.longitude}` : 'not saved')}`;
-          // Emit completed so parent can update the list, but keep the sheet open to show success message briefly
-          this.completed.emit({ type: logType, name: res.name });
-          setTimeout(() => this.close.emit(), 1200);
-        },
-        error: err => {
-          this.loading = false;
-          this.error = (err as any)?.error?.message || (err as any)?.message || 'Unable to record check.';
-        }
-      });
+  private buildDiagnostics(error: unknown): LocationDiagnostics {
+    const code = (error as any)?.code;
+    const message = (error as any)?.message;
+    return {
+      code,
+      message,
+      codeLabel: this.mapCodeLabel(code),
+      secureContext: window.isSecureContext,
+      origin: window.location.origin
+    };
+  }
+
+  private mapCodeLabel(code?: number): string | undefined {
+    if (code === 1) return 'PERMISSION_DENIED';
+    if (code === 2) return 'POSITION_UNAVAILABLE';
+    if (code === 3) return 'TIMEOUT';
+    return undefined;
+  }
+
+  private describeLocationError(error?: unknown): string {
+    const code = (error as any)?.code;
+    if (code === 1) {
+      return 'Location permission denied. iPhone Settings -> Privacy & Security -> Location Services -> enable for this site.';
+    }
+    if (code === 2) {
+      return 'Location unavailable. Please enable Location Services and try again.';
+    }
+    if (code === 3) {
+      return 'Location request timed out. Please try again.';
+    }
+    return 'Location is required. Please enable location and try again.';
   }
 }

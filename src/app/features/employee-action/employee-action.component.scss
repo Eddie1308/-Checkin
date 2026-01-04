@@ -58,6 +58,25 @@ header {
   border-radius: 10px;
 }
 
+.photo-preview {
+  width: 100%;
+  height: 180px;
+  background: #f3f4f6;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
 .location .row {
   display: flex;
   align-items: center;
@@ -79,4 +98,12 @@ header {
 .note {
   font-size: 0.9rem;
   color: #475569;
+}
+
+.visually-hidden {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
 }
