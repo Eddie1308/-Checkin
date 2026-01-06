@@ -1,3 +1,4 @@
+import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, HostListener, OnDestroy } from '@angular/core';
 import { AttendanceService } from '../../core/attendance.service';
 import { GeoService, GeoLocation } from '../../core/geo.service';
@@ -15,8 +16,10 @@ type LocationDiagnostics = {
 
 @Component({
   selector: 'app-employee-action',
+  standalone: true,
   templateUrl: './employee-action.component.html',
-  styleUrls: ['./employee-action.component.scss']
+  styleUrls: ['./employee-action.component.scss'],
+  imports: [CommonModule]
 })
 export class EmployeeActionComponent implements OnDestroy {
   @Input() employee!: Employee;
@@ -43,6 +46,7 @@ export class EmployeeActionComponent implements OnDestroy {
   private pendingAction?: LogType | null = null;
   private lastAction?: LogType | null = null;
   private lastGpsDurationMs = 0;
+  private readonly maxPhotoBytes = 5 * 1024 * 1024;
 
   constructor(private attendance: AttendanceService, private geo: GeoService) {}
 
@@ -62,6 +66,18 @@ export class EmployeeActionComponent implements OnDestroy {
       return;
     }
     if (!this.pendingAction) {
+      target.value = '';
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      this.error = 'Please select a valid image file.';
+      this.pendingAction = null;
+      target.value = '';
+      return;
+    }
+    if (file.size > this.maxPhotoBytes) {
+      this.error = 'Photo is too large. Please select an image under 5 MB.';
+      this.pendingAction = null;
       target.value = '';
       return;
     }
@@ -190,13 +206,7 @@ export class EmployeeActionComponent implements OnDestroy {
     this.error = undefined;
     this.loading = true;
     this.submitting = true;
-    const totalStart = performance.now();
-    let createDuration = 0;
-    let uploadDuration = 0;
-    const refreshDuration = 0;
-
     try {
-      console.log(`TIMING gps=${Math.round(gpsDurationMs)}ms`);
       const custom_client_uuid = this.attendance.generateClientUuid();
       const payload = {
         employee: this.employee.name,
@@ -216,24 +226,12 @@ export class EmployeeActionComponent implements OnDestroy {
             : undefined
       } as any;
 
-      const createStart = performance.now();
       const created = await firstValueFrom(this.attendance.createCheckin(payload));
-      createDuration = performance.now() - createStart;
-      console.log(`TIMING create=${Math.round(createDuration)}ms`);
       const createdName = created?.data?.name;
 
-      const uploadStart = performance.now();
       if (createdName && photoFile) {
         await firstValueFrom(this.attendance.attachFileToCheckin(createdName, photoFile));
       }
-      uploadDuration = performance.now() - uploadStart;
-      console.log(`TIMING upload=${Math.round(uploadDuration)}ms`);
-      console.log(`TIMING refresh=${Math.round(refreshDuration)}ms`);
-
-      const totalDuration = performance.now() - totalStart;
-      console.log(
-        `TIMINGS gps=${Math.round(gpsDurationMs)}ms create=${Math.round(createDuration)}ms upload=${Math.round(uploadDuration)}ms refresh=${Math.round(refreshDuration)}ms total=${Math.round(totalDuration)}ms`
-      );
 
       this.loading = false;
       this.submitting = false;
@@ -244,10 +242,6 @@ export class EmployeeActionComponent implements OnDestroy {
       }
       setTimeout(() => this.close.emit(), 1200);
     } catch (err) {
-      const totalDuration = performance.now() - totalStart;
-      console.log(
-        `TIMINGS gps=${Math.round(gpsDurationMs)}ms create=${Math.round(createDuration)}ms upload=${Math.round(uploadDuration)}ms refresh=${Math.round(refreshDuration)}ms total=${Math.round(totalDuration)}ms`
-      );
       this.loading = false;
       this.submitting = false;
       this.statusText = undefined;

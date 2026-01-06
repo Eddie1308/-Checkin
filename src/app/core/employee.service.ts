@@ -66,8 +66,15 @@ export class EmployeeService {
       filters: JSON.stringify(filters)
     };
 
-    return this.api.get<{ data: Employee[] }>('/api/resource/Employee', { params }).pipe(
-      map(res => res.data || [])
+    return this.api.get<unknown>('/api/resource/Employee', { params }).pipe(
+      map(res => this.normalizeEmployeeList(res))
     );
+  }
+
+  private normalizeEmployeeList(res: any): Employee[] {
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res?.message)) return res.message;
+    if (Array.isArray(res?.data)) return res.data;
+    return [];
   }
 }

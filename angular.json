@@ -31,6 +31,12 @@
           },
           "configurations": {
             "production": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
               "budgets": [
                 {
                   "type": "initial",
@@ -50,11 +56,11 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "browserTarget": "checkin-app:build"
+            "buildTarget": "checkin-app:build"
           },
           "configurations": {
             "production": {
-              "browserTarget": "checkin-app:build:production"
+              "buildTarget": "checkin-app:build:production"
             }
           }
         },
@@ -81,7 +87,6 @@
       }
     }
   },
-  "defaultProject": "checkin-app",
   "cli": {
     "analytics": false
   }

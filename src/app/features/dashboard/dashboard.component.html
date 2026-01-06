@@ -18,10 +18,12 @@
       <h2>Employees you manage</h2>
       <input type="search" placeholder="Search by name, id, department" [(ngModel)]="searchTerm">
     </div>
-
     <div *ngIf="loading">Loading employees...</div>
-    <div class="employee-list" *ngIf="!loading">
-      <div class="employee-row card" *ngFor="let emp of filtered" (click)="openAction(emp)">
+    <div class="alert" *ngIf="!loading && !filteredEmployees.length">
+      No employees found.
+    </div>
+    <div class="employee-list" *ngIf="!loading && filteredEmployees.length">
+      <div class="employee-row card" *ngFor="let emp of filteredEmployees" (click)="openAction(emp)">
         <div>
           <div class="name">{{ emp.employee_name || emp.name }}</div>
           <div class="meta">ID: {{ emp.name }}</div>

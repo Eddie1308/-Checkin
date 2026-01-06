@@ -1,12 +1,15 @@
+import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
-import { FormBuilder, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-login',
+  standalone: true,
   templateUrl: './login.component.html',
-  styleUrls: ['./login.component.scss']
+  styleUrls: ['./login.component.scss'],
+  imports: [CommonModule, ReactiveFormsModule]
 })
 export class LoginComponent {
   passwordForm = this.fb.group({

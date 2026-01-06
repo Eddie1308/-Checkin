@@ -1,11 +1,14 @@
+import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 import { AuthService } from './core/auth.service';
 
 @Component({
   selector: 'app-root',
+  standalone: true,
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
+  styleUrls: ['./app.component.scss'],
+  imports: [CommonModule, RouterOutlet]
 })
 export class AppComponent {
   title = 'ERPNext Site Check-In';
