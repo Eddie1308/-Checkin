@@ -20,8 +20,9 @@ html, body {
   background: var(--surface);
 }
 
-html {
-  overflow: hidden;
+html,
+body {
+  overflow: auto;
 }
 
 a {
