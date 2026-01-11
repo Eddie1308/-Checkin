@@ -326,7 +326,7 @@ export class EmployeeActionComponent implements OnDestroy {
   private describeLocationError(error?: unknown): string {
     const code = (error as any)?.code;
     if (code === 1) {
-      return 'Location permission denied. iPhone Settings -> Privacy & Security -> Location Services -> enable for this site.';
+      return 'Location permission denied. iPhone Settings -> Privacy & Security -> Location Services -> While Using the App.';
     }
     if (code === 2) {
       return 'Location unavailable. Please enable Location Services and try again.';
