@@ -20,8 +20,13 @@ export class LoginComponent {
 
   error?: string;
   loading = false;
+  showPassword = false;
 
   constructor(private fb: FormBuilder, private auth: AuthService, private router: Router) {}
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
+  }
 
   loginWithPassword(): void {
     if (this.passwordForm.invalid) {
@@ -45,7 +50,24 @@ export class LoginComponent {
     if (typeof error === 'string') {
       return error;
     }
-    const message = (error as any)?.error?.message || (error as any)?.message;
-    return message || 'Unable to sign in. Please verify credentials and network/CORS settings.';
+    const httpError = error as any;
+    const status = httpError?.status;
+    const message = httpError?.error?.message || httpError?.message;
+
+    if (status === 401) {
+      return 'Invalid username or password. Please check your credentials and try again.';
+    } else if (status === 403) {
+      return 'Access denied. You do not have permission to log in.';
+    } else if (status === 429) {
+      return 'Too many login attempts. Please wait a few minutes before trying again.';
+    } else if (status >= 500) {
+      return 'Server error. Please try again later or contact support if the issue persists.';
+    } else if (!navigator.onLine) {
+      return 'No internet connection. Please check your network and try again.';
+    } else if (message) {
+      return message;
+    } else {
+      return 'Unable to sign in. Please verify your credentials and network settings.';
+    }
   }
 }

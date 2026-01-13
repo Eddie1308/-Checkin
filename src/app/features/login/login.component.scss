@@ -52,7 +52,7 @@
   gap: 16px;
 }
 
-.login-form button {
+.login-form button[type="submit"] {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -72,7 +72,7 @@
   pointer-events: auto;
 }
 
-.login-form button:hover {
+.login-form button[type="submit"]:hover {
   background-color: #7a0c24;
 }
 
@@ -95,6 +95,48 @@ input {
 input:focus {
   outline: none;
   border-color: var(--primary-color);
+}
+
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+.password-input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-group input {
+  flex: 1;
+  padding-right: 50px; /* Space for the button */
+}
+
+.toggle-password-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  font-size: 1.2rem;
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.toggle-password-btn:hover {
+  color: var(--primary-color);
+  background-color: rgba(160, 16, 48, 0.08);
+}
+
+.eye-icon {
+  font-size: 1.2rem;
 }
 
 .remember {
