@@ -47,6 +47,8 @@ export class EmployeeActionComponent implements OnDestroy {
   private lastAction?: LogType | null = null;
   private lastGpsDurationMs = 0;
   private readonly maxPhotoBytes = 5 * 1024 * 1024;
+  private readonly maxPhotoDimension = 1280;
+  private readonly photoJpegQuality = 0.8;
 
   constructor(private attendance: AttendanceService, private geo: GeoService) {}
 
@@ -261,16 +263,19 @@ export class EmployeeActionComponent implements OnDestroy {
     }
     try {
       const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' } as any);
+      const maxDimension = this.maxPhotoDimension;
+      const largestSide = Math.max(bitmap.width, bitmap.height);
+      const scale = largestSide > maxDimension ? maxDimension / largestSide : 1;
       const canvas = document.createElement('canvas');
-      canvas.width = bitmap.width;
-      canvas.height = bitmap.height;
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
       const ctx = canvas.getContext('2d');
       if (!ctx) {
         return file;
       }
-      ctx.drawImage(bitmap, 0, 0);
-      const outputType = file.type || 'image/jpeg';
-      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, outputType, 0.92));
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const outputType = 'image/jpeg';
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, outputType, this.photoJpegQuality));
       if (!blob) {
         return file;
       }
