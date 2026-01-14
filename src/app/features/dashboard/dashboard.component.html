@@ -30,7 +30,7 @@
           <div class="meta" *ngIf="emp.department">{{ emp.department }}</div>
           <div class="meta" *ngIf="emp.designation">{{ emp.designation }}</div>
         </div>
-        <div class="pill">Manage</div>
+        <div class="pill status" [ngClass]="getStatusClass(emp)">{{ getStatusLabel(emp) }}</div>
       </div>
     </div>
   </div>

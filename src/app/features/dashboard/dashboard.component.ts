@@ -5,6 +5,7 @@ import { AuthService } from '../../core/auth.service';
 import { EmployeeService } from '../../core/employee.service';
 import { Employee } from '../../models/employee.model';
 import { EmployeeActionComponent } from '../employee-action/employee-action.component';
+import { LogType } from '../../models/checkin.model';
 import { finalize, map, of, switchMap } from 'rxjs';
 
 @Component({
@@ -22,6 +23,7 @@ export class DashboardComponent implements OnInit {
   error?: string;
   loading = false;
   infoMessage?: string;
+  private lastActionByEmployee: Record<string, LogType> = {};
 
   constructor(
     private auth: AuthService,
@@ -108,8 +110,28 @@ export class DashboardComponent implements OnInit {
     this.selected = undefined;
   }
 
-  onComplete(event: { type: string; name: string }): void {
+  getStatusLabel(employee: Employee): string {
+    const status = this.lastActionByEmployee[employee.name];
+    if (!status) {
+      return 'Manage';
+    }
+    return status === 'IN' ? 'Checked in' : 'Checked out';
+  }
+
+  getStatusClass(employee: Employee): string {
+    const status = this.lastActionByEmployee[employee.name];
+    if (!status) {
+      return 'status-manage';
+    }
+    return status === 'IN' ? 'status-in' : 'status-out';
+  }
+
+  onComplete(event: { type: LogType; name: string }): void {
+    const selectedName = this.selected?.name;
     this.infoMessage = `${event.type} recorded for ${this.selected?.employee_name || this.selected?.name} (doc ${event.name}).`;
+    if (selectedName) {
+      this.lastActionByEmployee[selectedName] = event.type;
+    }
     this.selected = undefined;
   }
 
