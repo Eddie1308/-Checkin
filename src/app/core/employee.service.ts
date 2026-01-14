@@ -19,6 +19,9 @@ export class EmployeeService {
     'company_email'
   ];
 
+  //How many employee records to fetch at most in one request
+  private readonly maxEmployees = 70;
+
   constructor(private api: ApiService) {}
 
   resolveSupervisorEmployee(loggedUser: string): Observable<Employee | null> {
@@ -63,7 +66,8 @@ export class EmployeeService {
   private fetchEmployees(filters: unknown[]): Observable<Employee[]> {
     const params = {
       fields: JSON.stringify(this.employeeFields),
-      filters: JSON.stringify(filters)
+      filters: JSON.stringify(filters),
+      limit_page_length: String(this.maxEmployees)
     };
 
     return this.api.get<unknown>('/api/resource/Employee', { params }).pipe(
