@@ -20,7 +20,7 @@ export class EmployeeService {
   ];
 
   //How many employee records to fetch at most in one request
-  private readonly maxEmployees = 70;
+  private readonly maxEmployees = 100;
 
   constructor(private api: ApiService) {}
 
