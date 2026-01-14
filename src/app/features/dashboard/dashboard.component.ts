@@ -52,6 +52,10 @@ export class DashboardComponent implements OnInit {
     );
   }
 
+  get fetchedCount(): number {
+    return this.displayEmployees.length;
+  }
+
   loadData(): void {
     const user = this.auth.state?.user;
     if (!user) {

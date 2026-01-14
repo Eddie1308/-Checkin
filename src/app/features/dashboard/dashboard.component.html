@@ -15,7 +15,7 @@
 
   <div class="panel">
     <div class="list-header">
-      <h2>Employees you manage</h2>
+      <h2>Employees you manage ({{ fetchedCount }})</h2>
       <input type="search" placeholder="Search by name, id, department" [(ngModel)]="searchTerm">
     </div>
     <div *ngIf="loading">Loading employees...</div>
